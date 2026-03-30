@@ -1,0 +1,5 @@
+{"reviewerID": "u1", "asin": "b1", "unixReviewTime": 1, "overall": 5}
+{"reviewerID": "u1", "asin": "b2", "unixReviewTime": 2, "overall": 4}
+{"reviewerID": "u2", "asin": "b3", "unixReviewTime": 1, "overall": 5}
+{"reviewerID": "u2", "asin": "b4", "unixReviewTime": 2, "overall": 5}
+{"reviewerID": "u3", "asin": "b5", "unixReviewTime": 1, "overall": 5}

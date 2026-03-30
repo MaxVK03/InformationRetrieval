@@ -1,0 +1,7 @@
+{"reviewerID": "u1", "asin": "m1", "unixReviewTime": 1, "overall": 5}
+{"reviewerID": "u1", "asin": "m2", "unixReviewTime": 2, "overall": 5}
+{"reviewerID": "u1", "asin": "m3", "unixReviewTime": 3, "overall": 5}
+{"reviewerID": "u2", "asin": "m4", "unixReviewTime": 1, "overall": 5}
+{"reviewerID": "u2", "asin": "m5", "unixReviewTime": 2, "overall": 5}
+{"reviewerID": "u2", "asin": "m6", "unixReviewTime": 3, "overall": 5}
+{"reviewerID": "u3", "asin": "m7", "unixReviewTime": 1, "overall": 3}
