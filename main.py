@@ -4,6 +4,7 @@ import reccomender.config as config
 from dataLoad.loader import load_domain
 from dataLoad.preproccesing import filter_shared_users
 from experiment.runner import run_all
+from dataLoad.loader import load_domain
 
 
 def main():

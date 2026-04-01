@@ -50,19 +50,16 @@ def _make_model_configs(target_prefix: str) -> list[dict]:
         },
     ]
 
-
 def run_all(
     source_df: pd.DataFrame,
     target_df: pd.DataFrame,
-    cold_levels: list[int]  = config.COLD_LEVELS,
-    k_eval: int             = config.K_EVAL,
-    target_domain: str      = config.TARGET_DOMAIN,
+    cold_levels: list[int] = config.COLD_LEVELS,
+    k_eval: int            = config.K_EVAL,
+    target_domain: str     = config.TARGET_DOMAIN,
 ) -> pd.DataFrame:
-    """
-    Run every model at every cold-start level and return a tidy results DataFrame.
-    """
     target_prefix = f"{target_domain}::"
     model_configs = _make_model_configs(target_prefix)
+    splits_dir    = config.TARGET_SPLITS_DIR
     rows = []
 
     for cold_k in cold_levels:
@@ -70,30 +67,18 @@ def run_all(
         print(f"Cold-start level: {cold_k} target train interactions/user")
         print(f"{'='*60}")
 
-        # Build train/test splits once per cold_k level
-        single_train, single_test = build_single_domain_frames(target_df, source_df, cold_k)
-        cross_train,  cross_test  = build_cross_domain_frames(source_df, target_df, cold_k)
+        single_train, single_test = build_single_domain_frames(cold_k, splits_dir)
+        cross_train,  cross_test  = build_cross_domain_frames(source_df, cold_k, splits_dir)
 
         for cfg in model_configs:
             print(f"\n  → {cfg['name']}")
-
             train = single_train if cfg["mode"] == "single" else cross_train
             test  = single_test  if cfg["mode"] == "single" else cross_test
 
             model = cfg["model"](**cfg["kwargs"])
             model.fit(train)
 
-            results = evaluate(
-                model,
-                test,
-                k=k_eval,
-                target_prefix=target_prefix,
-            )
-
-            rows.append({
-                "cold_k":       cold_k,
-                "model":        cfg["name"],
-                **results,
-            })
+            results = evaluate(model, test, k=k_eval, target_prefix=target_prefix)
+            rows.append({"cold_k": cold_k, "model": cfg["name"], **results})
 
     return pd.DataFrame(rows)
