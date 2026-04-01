@@ -78,7 +78,7 @@ def run_all(
             model = cfg["model"](**cfg["kwargs"])
             model.fit(train)
 
-            results = evaluate(model, test, k=k_eval, target_prefix=target_prefix)
+            results = evaluate(model, test, k=k_eval)
             rows.append({"cold_k": cold_k, "model": cfg["name"], **results})
 
     return pd.DataFrame(rows)

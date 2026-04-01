@@ -9,26 +9,18 @@ from evaluation.metrics import (
     mean_reciprocal_rank,
 )
 
-
-def evaluate(
-    model,
-    test_df: pd.DataFrame,
-    k: int = 10,
-    target_prefix: str | None = None,
-) -> dict:
+def evaluate(model, test_df: pd.DataFrame, k: int = 10) -> dict:
     """
     Generic evaluation loop.
 
     Every model must implement:
-        model.recommend(user, k) -> list[item_str]
+        model.recommend(user, k) -> list[item]
 
     Parameters
     ----------
-    model         : any model with a .recommend(user, k) method
-    test_df       : DataFrame with columns ["user", "item"]
-    k             : cutoff for all metrics
-    target_prefix : if set, filter recommendations to items starting with
-                    this prefix before scoring (used in cross-domain eval)
+    model   : any model with a .recommend(user, k) method
+    test_df : DataFrame with columns ["user", "item"]
+    k       : cutoff for all metrics
 
     Returns
     -------
@@ -36,14 +28,14 @@ def evaluate(
         users_evaluated, Precision@k, Recall@k, NDCG@k, MAP@k, MRR@k
     """
     recalls, precisions, ndcgs = [], [], []
-    all_recs: dict[str, list] = {}
-    ground_truths: dict[str, list] = {}
+    all_recs: dict = {}
+    ground_truths: dict = {}
 
     for _, row in test_df.iterrows():
         user    = row["user"]
         gt_item = row["item"]
 
-        recs = model.recommend(user, k=k, target_prefix=target_prefix)
+        recs = model.recommend(user, k=k)
 
         all_recs[user]      = recs
         ground_truths[user] = [gt_item]
