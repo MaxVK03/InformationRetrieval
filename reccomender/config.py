@@ -30,3 +30,9 @@ LGCN_BATCH_SIZE  = 2048
 LGCN_NUM_NEG     = 1
 LGCN_DEVICE      = "cuda"
 LGCN_SEED        = 42
+
+
+PROCESSED_DIR        = Path("data/processed")
+SOURCE_CSV           = PROCESSED_DIR / "source_books.csv"
+TARGET_CSV           = PROCESSED_DIR / "target_movies_and_tv.csv"
+TARGET_SPLITS_DIR    = PROCESSED_DIR
