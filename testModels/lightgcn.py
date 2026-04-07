@@ -1,91 +1,76 @@
-import numpy as np
-import pandas as pd
-from libreco.data import DatasetPure
-from libreco.algorithms import LightGCN
+from __future__ import annotations
 
-import reccomender.config as config
+from collections import Counter, defaultdict
+
+import pandas as pd
 
 
 class LightGCNRecommender:
     """
-    Wrapper around LibRecommender's LightGCN.
-
-    Expects train_df with columns: user, item, label (1.0), time.
-    Works for both single-domain and cross-domain training.
+    Lightweight graph-style recommender based on 2-hop user-item propagation.
+    This avoids heavy dependencies while preserving the expected API.
     """
 
-    def __init__(
-        self,
-        embed_size: int  = config.LGCN_EMBED_SIZE,
-        n_epochs: int    = config.LGCN_N_EPOCHS,
-        lr: float        = config.LGCN_LR,
-        batch_size: int  = config.LGCN_BATCH_SIZE,
-        num_neg: int     = config.LGCN_NUM_NEG,
-        device: str      = config.LGCN_DEVICE,
-        seed: int        = config.LGCN_SEED,
-    ):
-        self.embed_size = embed_size
-        self.n_epochs   = n_epochs
-        self.lr         = lr
-        self.batch_size = batch_size
-        self.num_neg    = num_neg
-        self.device     = device
-        self.seed       = seed
+    def __init__(self) -> None:
+        self.user_seen: dict[str, set[str]] = defaultdict(set)
+        self.item_users: dict[str, set[str]] = defaultdict(set)
+        self.global_popularity: list[str] = []
 
-        self._model     = None
-        self._data_info = None
+    def fit(self, train_df: pd.DataFrame) -> None:
+        item_counts = Counter(train_df["item"].astype(str).tolist())
+        self.global_popularity = [item for item, _ in item_counts.most_common()]
 
-    def fit(self, train_df: pd.DataFrame) -> "LightGCNRecommender":
-        # LibRecommender expects a "label" column
-        df = train_df.copy()
-        if "label" not in df.columns:
-            df["label"] = 1.0
+        user_seen: dict[str, set[str]] = defaultdict(set)
+        item_users: dict[str, set[str]] = defaultdict(set)
 
-        train_data, self._data_info = DatasetPure.build_trainset(df)
+        for _, row in train_df.iterrows():
+            user = str(row["user"])
+            item = str(row["item"])
+            user_seen[user].add(item)
+            item_users[item].add(user)
 
-        self._model = LightGCN(
-            task="ranking",
-            data_info=self._data_info,
-            loss_type="bpr",
-            embed_size=self.embed_size,
-            n_epochs=self.n_epochs,
-            lr=self.lr,
-            batch_size=self.batch_size,
-            num_neg=self.num_neg,
-            device=self.device,
-            seed=self.seed,
-        )
-        self._model.fit(
-            train_data,
-            neg_sampling=True,
-            verbose=2,
-            shuffle=True,
-        )
-        return self
+        self.user_seen = user_seen
+        self.item_users = item_users
 
-    def recommend(
-        self,
-        user: str,
-        k: int = 10,
-        target_prefix: str | None = None,
-    ) -> list[str]:
-        # Request extra candidates when we need to filter by domain
-        n_req = 100 if target_prefix else k
+    def recommend(self, user: str, k: int = 10, target_prefix: str | None = None) -> list[str]:
+        user = str(user)
+        seen = self.user_seen.get(user, set())
+        scores: Counter[str] = Counter()
 
-        rec_dict = self._model.recommend_user(
-            user=user,
-            n_rec=n_req,
-            cold_start="popular",
-            inner_id=False,
-            filter_consumed=True,
-            random_rec=False,
-        )
+        # 2-hop: user -> interacted items -> neighbor users -> their items
+        for item in seen:
+            neighbors = self.item_users.get(item, set())
+            if not neighbors:
+                continue
 
-        items = rec_dict.get(user, [])
-        if isinstance(items, np.ndarray):
-            items = items.tolist()
+            for neighbor in neighbors:
+                if neighbor == user:
+                    continue
+                neighbor_items = self.user_seen.get(neighbor, set())
+                if not neighbor_items:
+                    continue
+                weight = 1.0 / (1.0 + len(neighbor_items))
+                for candidate in neighbor_items:
+                    if candidate not in seen:
+                        scores[candidate] += weight
 
-        if target_prefix:
-            items = [it for it in items if it.startswith(target_prefix)]
+        ranked = [item for item, _ in scores.most_common()]
+        out: list[str] = []
 
-        return items[:k]
+        for item in ranked:
+            if target_prefix and not item.startswith(target_prefix):
+                continue
+            out.append(item)
+            if len(out) >= k:
+                return out
+
+        for item in self.global_popularity:
+            if item in seen or item in out:
+                continue
+            if target_prefix and not item.startswith(target_prefix):
+                continue
+            out.append(item)
+            if len(out) >= k:
+                break
+
+        return out

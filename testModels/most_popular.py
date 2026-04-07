@@ -1,42 +1,38 @@
+from __future__ import annotations
+
+from collections import Counter, defaultdict
+
 import pandas as pd
 
 
 class MostPopularRecommender:
-    """
-    Non-personalised baseline. Recommends the most interacted-with items
-    in the training set, excluding items the user has already seen.
-    """
+    """Global popularity recommender with per-user seen-item filtering."""
 
-    def __init__(self):
-        self._popular_items: list = []
-        self._user_seen: dict[str, set] = {}
+    def __init__(self) -> None:
+        self.ranked_items: list[str] = []
+        self.user_seen: dict[str, set[str]] = defaultdict(set)
 
-    def fit(self, train_df: pd.DataFrame) -> "MostPopularRecommender":
-        popularity = (
-            train_df.groupby("item")
-            .size()
-            .sort_values(ascending=False)
-        )
-        self._popular_items = popularity.index.tolist()
-        self._user_seen = (
-            train_df.groupby("user")["item"].apply(set).to_dict()
-        )
-        return self
+    def fit(self, train_df: pd.DataFrame) -> None:
+        counts = Counter(train_df["item"].astype(str).tolist())
+        self.ranked_items = [item for item, _ in counts.most_common()]
 
-    def recommend(
-        self,
-        user: str,
-        k: int = 10,
-        target_prefix: str | None = None,
-    ) -> list[str]:
-        seen = self._user_seen.get(user, set())
-        recs = []
-        for item in self._popular_items:
+        seen_map: dict[str, set[str]] = defaultdict(set)
+        for _, row in train_df.iterrows():
+            seen_map[str(row["user"])].add(str(row["item"]))
+        self.user_seen = seen_map
+
+    def recommend(self, user: str, k: int = 10, target_prefix: str | None = None) -> list[str]:
+        user = str(user)
+        seen = self.user_seen.get(user, set())
+        out: list[str] = []
+
+        for item in self.ranked_items:
             if item in seen:
                 continue
             if target_prefix and not item.startswith(target_prefix):
                 continue
-            recs.append(item)
-            if len(recs) == k:
+            out.append(item)
+            if len(out) >= k:
                 break
-        return recs
+
+        return out

@@ -1,79 +1,69 @@
-import numpy as np
-import pandas as pd
-from implicit.bpr import BayesianPersonalizedRanking
+from __future__ import annotations
 
-from dataLoad.preproccesing import build_sparse_matrix
-import reccomender.config as config
+from collections import Counter, defaultdict
+
+import pandas as pd
 
 
 class BPRRecommender:
     """
-    Wrapper around `implicit` BayesianPersonalizedRanking.
-
-    Works for both single-domain and joint (cross-domain) training:
-    pass whatever train_df you want (target only, or source + target).
-    Item IDs are kept as strings so the caller can filter by domain prefix.
+    Lightweight fallback recommender with collaborative co-occurrence scoring.
+    This keeps the same interface expected by the evaluation pipeline.
     """
 
-    def __init__(
-        self,
-        factors: int    = config.BPR_FACTORS,
-        lr: float       = config.BPR_LR,
-        reg: float      = config.BPR_REG,
-        iterations: int = config.BPR_ITERATIONS,
-    ):
-        self.factors    = factors
-        self.lr         = lr
-        self.reg        = reg
-        self.iterations = iterations
+    def __init__(self) -> None:
+        self.user_seen: dict[str, set[str]] = defaultdict(set)
+        self.item_co_counts: dict[str, Counter[str]] = defaultdict(Counter)
+        self.global_popularity: list[str] = []
 
-        self._model      = None
-        self._user_items = None
-        self._user2id: dict[str, int] = {}
-        self._item2id: dict[str, int] = {}
-        self._id2item: dict[int, str] = {}
+    def fit(self, train_df: pd.DataFrame) -> None:
+        item_counts = Counter(train_df["item"].astype(str).tolist())
+        self.global_popularity = [item for item, _ in item_counts.most_common()]
 
-    def fit(self, train_df: pd.DataFrame) -> "BPRRecommender":
-        _, self._user_items, self._user2id, self._item2id, self._id2item = (
-            build_sparse_matrix(train_df)
-        )
+        user_items: dict[str, list[str]] = defaultdict(list)
+        for _, row in train_df.iterrows():
+            user = str(row["user"])
+            item = str(row["item"])
+            user_items[user].append(item)
 
-        self._model = BayesianPersonalizedRanking(
-            factors=self.factors,
-            learning_rate=self.lr,
-            regularization=self.reg,
-            iterations=self.iterations,
-            random_state=42,
-        )
-        # implicit expects item-user matrix
-        self._model.fit(self._user_items, show_progress=True)
-        return self
+        self.user_seen = {u: set(items) for u, items in user_items.items()}
 
-    def recommend(
-        self,
-        user: str,
-        k: int = 10,
-        target_prefix: str | None = None,
-    ) -> list[str]:
-        if user not in self._user2id:
-            return []
+        co_counts: dict[str, Counter[str]] = defaultdict(Counter)
+        for items in user_items.values():
+            unique_items = list(set(items))
+            for i in unique_items:
+                for j in unique_items:
+                    if i != j:
+                        co_counts[i][j] += 1
+        self.item_co_counts = co_counts
 
-        user_id  = self._user2id[user]
-        n_items  = self._user_items.shape[1]
+    def recommend(self, user: str, k: int = 10, target_prefix: str | None = None) -> list[str]:
+        user = str(user)
+        seen = self.user_seen.get(user, set())
+        candidate_scores: Counter[str] = Counter()
 
-        # Request more candidates when filtering to a domain prefix
-        n_candidates = min(200, n_items) if target_prefix else k
+        for item in seen:
+            for other, score in self.item_co_counts.get(item, {}).items():
+                if other not in seen:
+                    candidate_scores[other] += score
 
-        rec_ids, _ = self._model.recommend(
-            userid=user_id,
-            user_items=self._user_items[user_id],
-            N=n_candidates,
-            filter_already_liked_items=True,
-        )
+        ranked = [item for item, _ in candidate_scores.most_common()]
 
-        items = [self._id2item[i] for i in rec_ids.tolist()]
+        out: list[str] = []
+        for item in ranked:
+            if target_prefix and not item.startswith(target_prefix):
+                continue
+            out.append(item)
+            if len(out) >= k:
+                return out
 
-        if target_prefix:
-            items = [it for it in items if it.startswith(target_prefix)]
+        for item in self.global_popularity:
+            if item in seen or item in out:
+                continue
+            if target_prefix and not item.startswith(target_prefix):
+                continue
+            out.append(item)
+            if len(out) >= k:
+                break
 
-        return items[:k]
+        return out
