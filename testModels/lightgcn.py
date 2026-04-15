@@ -6,11 +6,6 @@ import pandas as pd
 
 
 class LightGCNRecommender:
-    """
-    Lightweight graph-style recommender based on 2-hop user-item propagation.
-    This avoids heavy dependencies while preserving the expected API.
-    """
-
     def __init__(self) -> None:
         self.user_seen: dict[str, set[str]] = defaultdict(set)
         self.item_users: dict[str, set[str]] = defaultdict(set)

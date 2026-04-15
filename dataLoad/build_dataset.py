@@ -284,3 +284,10 @@ def main() -> None:
             indent=2,
         )
     )
+
+    print(f"Books users: {len(books_users)}")
+    print(f"Movies users: {len(movies_users)}")
+    print(f"Overlap users: {len(overlap_users)}")
+
+if __name__ == "__main__":
+    main()

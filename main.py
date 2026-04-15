@@ -1,24 +1,22 @@
 import pandas as pd
 
 import reccomender.config as config
-from dataLoad.loader import load_domain
-from dataLoad.preproccesing import filter_shared_users
+from dataLoad.loader import load_preprocessed
 from experiment.runner import run_all
 
 
 def main():
     print("Loading data...")
-    source_df = load_domain(config.BOOKS_PATH,  config.SOURCE_DOMAIN, config.CHUNK_SIZE)
-    target_df = load_domain(config.MOVIES_PATH, config.TARGET_DOMAIN, config.CHUNK_SIZE)
+    source_df, target_df = load_preprocessed(config.SOURCE_CSV, config.TARGET_CSV)
+
+    source_df = source_df.rename(columns={"timestamp": "time"})
+    target_df = target_df.rename(columns={"timestamp": "time"})
 
     print(f"  {config.SOURCE_DOMAIN}: {len(source_df):,} interactions")
     print(f"  {config.TARGET_DOMAIN}: {len(target_df):,} interactions")
 
-    source_df, target_df = filter_shared_users(source_df, target_df)
-
-    print(f"\nAfter shared-user filter:")
-    print(f"  {config.SOURCE_DOMAIN}: {len(source_df):,} interactions")
-    print(f"  {config.TARGET_DOMAIN}: {len(target_df):,} interactions")
+    print("  Source columns:", source_df.columns.tolist())
+    print("  Target columns:", target_df.columns.tolist())
 
     results_df = run_all(source_df, target_df)
 

@@ -1,0 +1,16 @@
+cold_k,model,users_evaluated,Precision@10,Recall@10,NDCG@10,MAP@10,MRR@10
+1,MostPopular (single),155,0.0,0.0,0.0,0.0,0.0
+1,BPR (single),155,0.0,0.0,0.0,0.0,0.0
+1,BPR (cross),1370,0.0,0.0,0.0,0.0,0.0
+1,LightGCN (single),155,0.0,0.0,0.0,0.0,0.0
+1,LightGCN (cross),1370,0.0,0.0,0.0,0.0,0.0
+2,MostPopular (single),282,0.0,0.0,0.0,0.0,0.0
+2,BPR (single),282,0.0,0.0,0.0,0.0,0.0
+2,BPR (cross),1376,0.0,0.0,0.0,0.0,0.0
+2,LightGCN (single),282,0.0,0.0,0.0,0.0,0.0
+2,LightGCN (cross),1376,0.0,0.0,0.0,0.0,0.0
+5,MostPopular (single),583,0.0,0.0,0.0,0.0,0.0
+5,BPR (single),583,0.0,0.0,0.0,0.0,0.0
+5,BPR (cross),1395,0.0,0.0,0.0,0.0,0.0
+5,LightGCN (single),583,0.0,0.0,0.0,0.0,0.0
+5,LightGCN (cross),1395,0.0,0.0,0.0,0.0,0.0

@@ -6,11 +6,6 @@ import pandas as pd
 
 
 class BPRRecommender:
-    """
-    Lightweight fallback recommender with collaborative co-occurrence scoring.
-    This keeps the same interface expected by the evaluation pipeline.
-    """
-
     def __init__(self) -> None:
         self.user_seen: dict[str, set[str]] = defaultdict(set)
         self.item_co_counts: dict[str, Counter[str]] = defaultdict(Counter)
