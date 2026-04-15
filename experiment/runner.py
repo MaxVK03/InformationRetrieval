@@ -54,11 +54,17 @@ def run_all(
     source_df: pd.DataFrame,
     target_df: pd.DataFrame,
     cold_levels: list[int] = config.COLD_LEVELS,
+<<<<<<< HEAD
     k_eval: int = config.K_EVAL,
     target_domain: str = config.TARGET_DOMAIN,
+=======
+    k_eval: int            = config.K_EVAL,
+    target_domain: str     = config.TARGET_DOMAIN,
+>>>>>>> origin/main
 ) -> pd.DataFrame:
     target_prefix = f"{target_domain}::"
     model_configs = _make_model_configs(target_prefix)
+    splits_dir    = config.TARGET_SPLITS_DIR
     rows = []
 
     for cold_k in cold_levels:
@@ -66,6 +72,7 @@ def run_all(
         print(f"Cold-start level: {cold_k} target train interactions/user")
         print(f"{'=' * 60}")
 
+<<<<<<< HEAD
         single_train, single_test = build_single_domain_frames(
             target_df=target_df,
             source_df=source_df,
@@ -76,6 +83,10 @@ def run_all(
             target_df=target_df,
             cold_k=cold_k,
         )
+=======
+        single_train, single_test = build_single_domain_frames(cold_k, splits_dir)
+        cross_train,  cross_test  = build_cross_domain_frames(source_df, cold_k, splits_dir)
+>>>>>>> origin/main
 
         for cfg in model_configs:
             print(f"\n  → {cfg['name']}")
@@ -86,6 +97,7 @@ def run_all(
             model.fit(train)
 
             results = evaluate(model, test, k=k_eval)
+<<<<<<< HEAD
             rows.append(
                 {
                     "cold_k": cold_k,
@@ -93,5 +105,8 @@ def run_all(
                     **results,
                 }
             )
+=======
+            rows.append({"cold_k": cold_k, "model": cfg["name"], **results})
+>>>>>>> origin/main
 
     return pd.DataFrame(rows)
